@@ -12,7 +12,11 @@ export class Git {
     const { stdout: changes } = await this.diff(['--cached']);
 
     if (changes.length === 0) {
-      return this.execute(getWorkspaceFolder(), 'add', [`--all`]);
+      await this.execute(getWorkspaceFolder(), 'add', [`--all`]);
+      const { stdout: changes } = await this.diff(['--cached']);
+      if (changes.length === 0) {
+        throw new Error("No files were added to staging.");
+      }
     }
   }
 

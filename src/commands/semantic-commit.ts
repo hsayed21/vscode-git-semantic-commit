@@ -201,18 +201,22 @@ export class SemanticCommitCommand extends Command {
   }
 
   private async commitAction(message: string) {
+    let thereFilesToCommit = true;
     if (this.isStageAllEnabled) {
       try {
         await Git.add();
       } catch ({ message }) {
         window.showErrorMessage(message);
+        thereFilesToCommit = false;
       }
     }
 
-    try {
-      await Git.commit(message, this.getCommitOptions());
-    } catch ({ message }) {
-      window.showErrorMessage(message);
+    if (thereFilesToCommit) {
+      try {
+        await Git.commit(message, this.getCommitOptions());
+      } catch ({ message }) {
+        window.showErrorMessage(message);
+      }
     }
   }
 }
