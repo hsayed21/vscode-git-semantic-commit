@@ -27,4 +27,8 @@ export class Git {
   private static async diff(options: string[] = []) {
     return this.execute(getWorkspaceFolder(), 'diff', [...options]);
   }
+
+  static async emptyCommit(message: string = 'nothing to see here') {
+    return this.execute(getWorkspaceFolder(), 'commit', ['--allow-empty', `-m "${message}"`]);
+  }
 }

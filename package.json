@@ -60,6 +60,11 @@
           "default": "($scope)",
           "markdownDescription": "Specifies scope template (`$scope` placeholder will be replaced with the passed scope). Check out [this](https://github.com/nitayneeman/vscode-git-semantic-commit#customize-your-scope) example."
         },
+        "gitSemanticCommit.emojiWithCommit": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Determines whether to enable emoji with the commit message."
+        },
         "gitSemanticCommit.stageAll": {
           "type": "boolean",
           "default": true,
@@ -69,104 +74,143 @@
           "type": "array",
           "default": [
             {
-              "type": "build",
-              "description": "Development changes related to the build system"
+              "type": "Initial commit",
+              "description": "Initial commit",
+              "emoji": "🎉",
+              "standalone": true
             },
             {
-              "type": "ci",
-              "description": "Development changes related to the continuous integration and deployment system"
+              "type": "add",
+              "description": "Add new files",
+              "emoji": "➕"
             },
             {
-              "type": "docs",
-              "description": "Documentation changes related to the project"
-            },
-            {
-              "type": "feat",
-              "description": "Production changes related to new backward-compatible abilities or functionality"
+              "type": "update",
+              "description": "Update existing code or files",
+              "emoji": "🔨"
             },
             {
               "type": "fix",
-              "description": "Production changes related to backward-compatible bug fixes"
+              "description": "Fix a bug",
+              "emoji": "🐞"
             },
             {
-              "type": "perf",
-              "description": "Production changes related to backward-compatible performance improvements"
+              "type": "improv",
+              "description": "Improve performance or functionality",
+              "emoji": "⚡️"
             },
             {
               "type": "refactor",
-              "description": "Development changes related to modifying the codebase"
+              "description": "Refactor code without changing functionality",
+              "emoji": "♻️"
             },
             {
               "type": "style",
-              "description": "Development changes related to styling the codebase"
+              "description": "Update code style",
+              "emoji": "💄"
             },
             {
-              "type": "test",
-              "description": "Development changes related to tests"
+              "type": "remove",
+              "description": "Remove files or code",
+              "emoji": "➖"
+            },
+            {
+              "type": "feat",
+              "description": "Add a new feature",
+              "emoji": "🌟"
+            },
+            {
+              "type": "Clean up code",
+              "description": "Clean up code",
+              "emoji": "🧹",
+              "standalone": true
+            },
+            {
+              "type": "Work in progress",
+              "description": "Work in progress",
+              "emoji": "🚧",
+              "standalone": true
+            },
+            {
+              "type": "Merge branches",
+              "description": "Merge branches",
+              "emoji": "🔀",
+              "standalone": true
+            },
+            {
+              "type": "hotfix",
+              "description": "Apply a critical hotfix",
+              "emoji": "🚑️"
+            },
+            {
+              "type": "Code review changes",
+              "description": "Code review changes",
+              "emoji": "👌",
+              "standalone": true
             }
+        ],
+        "items": {
+          "type": [
+            "string",
+            "object"
           ],
-          "items": {
-            "type": [
-              "string",
-              "object"
-            ],
-            "description": "Can be either a string, or an object. If an object, use type for the commit type, and description to give a short description for the particular commit type."
-          },
-          "minItems": 1,
-          "uniqueItems": true,
-          "markdownDescription": "Specifies the supported message types. Check out [this](https://github.com/nitayneeman/vscode-git-semantic-commit#customize-your-types) example."
-        }
-      }
-    },
-    "commands": [
-      {
-        "command": "gitSemanticCommit.semanticCommit",
-        "title": "Semantic Commit",
-        "category": "Git",
-        "icon": {
-          "dark": "images/navigation/dark-icon.svg",
-          "light": "images/navigation/light-icon.svg"
-        }
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "gitSemanticCommit.semanticCommit",
-          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
-        }
-      ],
-      "scm/title": [
-        {
-          "command": "gitSemanticCommit.semanticCommit",
-          "when": "scmProvider == git",
-          "group": "navigation"
+          "description": "Can be either a string, or an object. If an object, use type for the commit type, and description to give a short description for the particular commit type."
         },
-        {
-          "command": "gitSemanticCommit.semanticCommit",
-          "when": "scmProvider == git",
-          "group": "4_commit"
-        }
-      ]
+        "minItems": 1,
+        "uniqueItems": true,
+        "markdownDescription": "Specifies the supported message types. Check out [this](https://github.com/nitayneeman/vscode-git-semantic-commit#customize-your-types) example."
+      }
     }
   },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && git init test-temp --quiet",
-    "test": "node ./out/test/runTest.js"
-  },
-  "devDependencies": {
-    "@types/glob": "^7.1.1",
-    "@types/mocha": "^5.2.7",
-    "@types/node": "^12.11.1",
-    "@types/vscode": "^1.39.0",
-    "fs-extra": "^8.1.0",
-    "glob": "^7.1.4",
-    "mocha": "^6.2.2",
-    "tslint": "^5.20.0",
-    "typescript": "^3.6.4",
-    "vscode-test": "^1.2.0"
+  "commands": [
+    {
+      "command": "gitSemanticCommit.semanticCommit",
+      "title": "Semantic Commit",
+      "category": "Git",
+      "icon": {
+        "dark": "images/navigation/dark-icon.svg",
+        "light": "images/navigation/light-icon.svg"
+      }
+    }
+  ],
+  "menus": {
+    "commandPalette": [
+      {
+        "command": "gitSemanticCommit.semanticCommit",
+        "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+      }
+    ],
+    "scm/title": [
+      {
+        "command": "gitSemanticCommit.semanticCommit",
+        "when": "scmProvider == git",
+        "group": "navigation"
+      },
+      {
+        "command": "gitSemanticCommit.semanticCommit",
+        "when": "scmProvider == git",
+        "group": "4_commit"
+      }
+    ]
   }
+},
+"scripts": {
+  "vscode:prepublish": "npm run compile",
+  "compile": "tsc -p ./",
+  "watch": "tsc -watch -p ./",
+  "pretest": "npm run compile && git init test-temp --quiet",
+  "test": "node ./out/test/runTest.js"
+},
+"devDependencies": {
+  "@types/glob": "^7.1.1",
+  "@types/mocha": "^5.2.7",
+  "@types/node": "^12.11.1",
+  "@types/vscode": "^1.39.0",
+  "fs-extra": "^8.1.0",
+  "glob": "^7.1.4",
+  "mocha": "^6.2.2",
+  "tslint": "^5.20.0",
+  "typescript": "^3.6.4",
+  "vscode-test": "^1.2.0"
+}
 }

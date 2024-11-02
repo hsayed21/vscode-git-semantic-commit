@@ -7,7 +7,31 @@ import { Command } from './common';
 
 const enum ActionType {
   scope = 'scope',
-  subject = 'subject'
+  subject = 'subject',
+  command = 'command'
+}
+
+class CommitType {
+  type: string;
+  description: string;
+  emoji: string;
+  standalone: boolean;
+
+  constructor(type: string, description: string, emoji: string, standalone: boolean = false) {
+    this.type = type;
+    this.description = description;
+    this.emoji = emoji;
+    this.standalone = standalone;
+  }
+
+  get displayType(): string {
+    const isEmojiWithCommit = getConfiguration()[ConfigurationProperties.useEmojiWithCommit];
+    return this.emoji && isEmojiWithCommit ? `${this.emoji} ${this.type}` : this.type;
+  }
+
+  isStandalone(): boolean {
+    return this.standalone;
+  }
 }
 
 const scopeStorageKey = `${workspaceStorageKey}:scope`;
@@ -16,31 +40,35 @@ export class SemanticCommitCommand extends Command {
   identifier = 'semanticCommit';
 
   context: ExtensionContext;
-  scope: string;
-  types: (string | {type: string, description: string})[];
+  scope: string = "";
+  commitTypes: CommitType[] = [];
 
   constructor(context: ExtensionContext) {
     super();
 
     this.context = context;
-    this.scope = this.getScope();
-    this.types = this.getTypes();
+    this.loadSettings();
+    workspace.onDidChangeConfiguration(() => this.loadSettings());
+  }
 
-    workspace.onDidChangeConfiguration(() => {
-      this.scope = this.getScope();
-      this.types = this.getTypes();
-    });
+  private loadSettings() {
+    this.scope = this.getScope();
+    this.commitTypes = this.retrieveCommitTypes();
+  }
+
+  private retrieveCommitTypes(): CommitType[] {
+    const configTypes = getConfiguration()[ConfigurationProperties.types];
+    return configTypes.map((item: any) => new CommitType(item.type, item.description, item.emoji, item.standalone));
   }
 
   async execute() {
     await Git.exists();
 
     const quickPick = this.createQuickPick(this.createQuickPickItems());
-
     quickPick.show();
 
     quickPick.onDidHide(() => {
-      if (!this.isPreserveScopeEnabled()) {
+      if (!this.isPreserveScopeEnabled) {
         this.scope = '';
       }
     });
@@ -56,22 +84,20 @@ export class SemanticCommitCommand extends Command {
           quickPick.value = '';
           quickPick.items = this.createQuickPickItems();
         } else {
-          const [{ type }] = items;
+          const [{ type, standalone }] = items;
           const subject = quickPick.value;
-
-          await this.performCommit(type, subject);
-
+          await this.performCommit(type, actionType, standalone, subject);
           quickPick.hide();
         }
       }
     });
   }
 
-  private isPreserveScopeEnabled() {
+  private get isPreserveScopeEnabled() {
     return getConfiguration()[ConfigurationProperties.preserveScope];
   }
 
-  private isStageAllEnabled() {
+  private get isStageAllEnabled() {
     return getConfiguration()[ConfigurationProperties.stageAll];
   }
 
@@ -80,12 +106,12 @@ export class SemanticCommitCommand extends Command {
     return template.length ? template : scopeTemplatePlaceholder;
   }
 
-  private hasScope() {
+  private get hasScope() {
     return this.scope.length > 0;
   }
 
   private getScope() {
-    return this.isPreserveScopeEnabled()
+    return this.isPreserveScopeEnabled
       ? this.context.workspaceState.get(scopeStorageKey, '')
       : '';
   }
@@ -109,55 +135,84 @@ export class SemanticCommitCommand extends Command {
   }
 
   private createQuickPickItems(): QuickPickItem[] {
-    const hasScope = this.hasScope();
-    const typeItems = this.types.map(item => {
-        const description = typeof item === "string" ? "" : item.description
-        const type = typeof item === "string" ? item : item.type
-        return ({
-          label: `$(git-commit) Commit with "${type}" type`,
-          alwaysShow: true,
-          actionType: ActionType.subject,
-          type,
-          description
-        })
+    const typeItems = this.commitTypes.map(item => {
+      return ({
+        label: `$(git-commit) Commit with "${item.displayType}" type`,
+        alwaysShow: true,
+        actionType: ActionType.subject,
+        type: item.displayType,
+        description: item.description,
+        standalone: item.standalone
+      });
     });
 
     return [
       {
-        label: hasScope
+        label: this.hasScope
           ? `$(gist-new) Change the message scope`
           : `$(gist-new) Add a message scope`,
         alwaysShow: true,
         actionType: ActionType.scope,
         type: '',
-        description: hasScope ? `current: "${this.scope}"` : ''
+        description: this.hasScope ? `current: "${this.scope}"` : '',
+        standalone: false
       },
-      ...typeItems
+      ...typeItems,
+      {
+        label: `$(check) Commit with an empty message`,
+        alwaysShow: true,
+        actionType: ActionType.command,
+        type: 'emptyMessageCommand',
+        description: '',
+        standalone: true
+      }
     ];
   }
 
-  private async performCommit(type: string, subject: string) {
+  private async performCommit(type: string, actionType: ActionType, standalone: boolean, subject: string) {
+    if (actionType === ActionType.command) {
+      if (type === 'emptyMessageCommand') {
+        await Git.emptyCommit();
+      }
+      return;
+    }
+
+    if (standalone) {
+      await this.commitAction(type);
+      return;
+    }
+
     if (subject.length > 0) {
-      const scope = this.hasScope()
+      const scope = this.hasScope
         ? this.scopeTemplate.replace(scopeTemplatePlaceholder, this.scope)
         : '';
-      const message = `${type}${scope}: ${subject}`;
+      let message = "";
+      if (subject.length > 0)
+        message = `${type}${scope}: ${subject}`;
+      else
+        message = type;
 
-      if (this.isStageAllEnabled()) {
-        try {
-          await Git.add();
-        } catch ({ message }) {
-          window.showErrorMessage(message);
-        }
-      }
+      await this.commitAction(message);
+    }
+    else {
 
+      window.showErrorMessage('The message subject cannot be empty!');
+    }
+  }
+
+  private async commitAction(message: string) {
+    if (this.isStageAllEnabled) {
       try {
-        await Git.commit(message, this.getCommitOptions());
+        await Git.add();
       } catch ({ message }) {
         window.showErrorMessage(message);
       }
-    } else {
-      window.showErrorMessage('The message subject cannot be empty!');
+    }
+
+    try {
+      await Git.commit(message, this.getCommitOptions());
+    } catch ({ message }) {
+      window.showErrorMessage(message);
     }
   }
 }
